@@ -1,0 +1,48 @@
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.pdb
+*.obj
+
+# Binaries and intermediate files
+[Dd]ebug/
+[Rr]elease/
+[Bb]in/
+[Oo]bj/
+*.exe
+*.dll
+*.pdb
+*.node
+*.json.log
+*.nupkg
+*.suo
+*.user
+*.userprefs
+*.vspscc
+*.vssscc
+
+# Test results
+TestResults/
+
+# NuGet packages
+packages/
+*.nupkg
+
+# Bower and npm packages
+bower_components/
+node_modules/
+
+# JetBrains Rider
+.idea/
+
+# Visual Studio Code
+.vscode/
+
+# Ignore log files, etc.
+*.log
+[Ll]ogs/
+[Tt]emp/
+temp/
+
+.env
