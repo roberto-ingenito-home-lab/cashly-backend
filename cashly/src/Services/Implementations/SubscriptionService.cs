@@ -17,8 +17,12 @@ public class SubscriptionService(AppDbContext context) : ISubscriptionService
             throw new AppException("user-not-found", HttpStatusCode.NotFound);
 
         // 2. Verifica categoria se inserita
-        if (dto.CategoryId is not null && 
-            !await context.Categories.AnyAsync(c => c.CategoryId == dto.CategoryId && c.UserId == userId))
+        if (
+            dto.CategoryId is not null
+            && !await context.Categories.AnyAsync(c =>
+                c.CategoryId == dto.CategoryId && c.UserId == userId
+            )
+        )
         {
             throw new AppException("category-not-found", HttpStatusCode.NotFound);
         }
@@ -32,7 +36,7 @@ public class SubscriptionService(AppDbContext context) : ISubscriptionService
             StartDate = dto.StartDate?.ToUniversalTime(),
             EndDate = dto.EndDate?.ToUniversalTime(),
             CategoryId = dto.CategoryId,
-            UserId = userId
+            UserId = userId,
         };
 
         context.Subscriptions.Add(newSubscription);
@@ -47,15 +51,24 @@ public class SubscriptionService(AppDbContext context) : ISubscriptionService
         return newSubscription;
     }
 
-    public async Task<Subscription> UpdateSubscriptionAsync(int subscriptionId, SubscriptionUpdateDto dto, int userId)
+    public async Task<Subscription> UpdateSubscriptionAsync(
+        int subscriptionId,
+        SubscriptionUpdateDto dto,
+        int userId
+    )
     {
-        var subscription = await context.Subscriptions
-            .FirstOrDefaultAsync(s => s.SubscriptionId == subscriptionId && s.UserId == userId)
-            ?? throw new AppException("subscription-not-found", HttpStatusCode.NotFound);
+        var subscription =
+            await context.Subscriptions.FirstOrDefaultAsync(s =>
+                s.SubscriptionId == subscriptionId && s.UserId == userId
+            ) ?? throw new AppException("subscription-not-found", HttpStatusCode.NotFound);
 
         // Verifica categoria se inserita
-        if (dto.CategoryId is not null && 
-            !await context.Categories.AnyAsync(c => c.CategoryId == dto.CategoryId && c.UserId == userId))
+        if (
+            dto.CategoryId is not null
+            && !await context.Categories.AnyAsync(c =>
+                c.CategoryId == dto.CategoryId && c.UserId == userId
+            )
+        )
         {
             throw new AppException("category-not-found", HttpStatusCode.NotFound);
         }
@@ -80,9 +93,10 @@ public class SubscriptionService(AppDbContext context) : ISubscriptionService
 
     public async Task DeleteSubscriptionAsync(int subscriptionId, int userId)
     {
-        var subscription = await context.Subscriptions
-            .FirstOrDefaultAsync(s => s.SubscriptionId == subscriptionId && s.UserId == userId)
-            ?? throw new AppException("subscription-not-found", HttpStatusCode.NotFound);
+        var subscription =
+            await context.Subscriptions.FirstOrDefaultAsync(s =>
+                s.SubscriptionId == subscriptionId && s.UserId == userId
+            ) ?? throw new AppException("subscription-not-found", HttpStatusCode.NotFound);
 
         context.Subscriptions.Remove(subscription);
         await context.SaveChangesAsync();
@@ -90,14 +104,17 @@ public class SubscriptionService(AppDbContext context) : ISubscriptionService
 
     public async Task<IEnumerable<Subscription>> GetSubscriptionsByUserIdAsync(int userId)
     {
-        return await context.Subscriptions
-            .Include(s => s.Category)
+        return await context
+            .Subscriptions.Include(s => s.Category)
             .Where(s => s.UserId == userId)
             .OrderBy(s => s.Name)
             .ToListAsync();
     }
 
-    public async Task<Transaction> PostTransactionFromSubscriptionAsync(int subscriptionId, int userId)
+    public async Task<Transaction> PostTransactionFromSubscriptionAsync(
+        int subscriptionId,
+        int userId
+    )
     {
         var strategy = context.Database.CreateExecutionStrategy();
 
@@ -107,9 +124,10 @@ public class SubscriptionService(AppDbContext context) : ISubscriptionService
             try
             {
                 // 1. Trova l'abbonamento
-                var subscription = await context.Subscriptions
-                    .FirstOrDefaultAsync(s => s.SubscriptionId == subscriptionId && s.UserId == userId)
-                    ?? throw new AppException("subscription-not-found", HttpStatusCode.NotFound);
+                var subscription =
+                    await context.Subscriptions.FirstOrDefaultAsync(s =>
+                        s.SubscriptionId == subscriptionId && s.UserId == userId
+                    ) ?? throw new AppException("subscription-not-found", HttpStatusCode.NotFound);
 
                 // 2. Crea la transazione finanziaria
                 Transaction transaction = new()
@@ -119,15 +137,20 @@ public class SubscriptionService(AppDbContext context) : ISubscriptionService
                     TransactionDate = DateTime.UtcNow,
                     Description = $"Pagamento abbonamento: {subscription.Name}",
                     CategoryId = subscription.CategoryId,
-                    UserId = userId
+                    UserId = userId,
                 };
                 context.Transactions.Add(transaction);
 
                 // 3. Aggiorna saldo utente
-                decimal adjustment = transaction.Type == TransactionType.income ? transaction.Amount : -transaction.Amount;
-                await context.Users
-                    .Where(u => u.UserId == userId)
-                    .ExecuteUpdateAsync(s => s.SetProperty(u => u.CurrentBalance, u => u.CurrentBalance + adjustment));
+                decimal adjustment =
+                    transaction.Type == TransactionType.income
+                        ? transaction.Amount
+                        : -transaction.Amount;
+                await context
+                    .Users.Where(u => u.UserId == userId)
+                    .ExecuteUpdateAsync(s =>
+                        s.SetProperty(u => u.CurrentBalance, u => u.CurrentBalance + adjustment)
+                    );
 
                 // 4. Aggiorna data di ultimo pagamento
                 subscription.LastPaymentDate = DateTime.UtcNow;

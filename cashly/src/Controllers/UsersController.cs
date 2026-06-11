@@ -27,7 +27,9 @@ public class UsersController(IUserService userService) : ControllerBase
     }
 
     [HttpPost("refresh")]
-    public async Task<ActionResult<UserLoginResponseDto>> Refresh([FromBody] RefreshTokenRequestDto dto)
+    public async Task<ActionResult<UserLoginResponseDto>> Refresh(
+        [FromBody] RefreshTokenRequestDto dto
+    )
     {
         try
         {
@@ -54,7 +56,12 @@ public class UsersController(IUserService userService) : ControllerBase
         }
 
         await userService.ForgotPassword(dto, origin);
-        return Ok(new { message = "Se l'indirizzo email è registrato, riceverai a breve un link di ripristino." });
+        return Ok(
+            new
+            {
+                message = "Se l'indirizzo email è registrato, riceverai a breve un link di ripristino.",
+            }
+        );
     }
 
     [HttpPost("reset-password")]
@@ -64,4 +71,3 @@ public class UsersController(IUserService userService) : ControllerBase
         return Ok(new { message = "Password reimpostata con successo." });
     }
 }
-

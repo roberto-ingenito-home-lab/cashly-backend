@@ -10,7 +10,10 @@ namespace cashly.src.Services.Implementations;
 
 public class TransactionService(AppDbContext context) : ITransactionService
 {
-    public async Task<Transaction> CreateTransactionAsync(TransactionCreateDto transactionDto, int userId)
+    public async Task<Transaction> CreateTransactionAsync(
+        TransactionCreateDto transactionDto,
+        int userId
+    )
     {
         var strategy = context.Database.CreateExecutionStrategy();
 
@@ -27,7 +30,9 @@ public class TransactionService(AppDbContext context) : ITransactionService
                 // 2. Verifica categoria
                 if (
                     transactionDto.CategoryId is not null
-                    && !await context.Categories.AnyAsync(c => c.CategoryId == transactionDto.CategoryId && c.UserId == userId)
+                    && !await context.Categories.AnyAsync(c =>
+                        c.CategoryId == transactionDto.CategoryId && c.UserId == userId
+                    )
                 )
                     throw new AppException("category-not-found", HttpStatusCode.NotFound);
 
@@ -43,11 +48,19 @@ public class TransactionService(AppDbContext context) : ITransactionService
                 };
 
                 // 4. Aggiorna il saldo in modo ATOMICO sul Database
-                decimal balanceAdjustment = newTransaction.Type == TransactionType.income ? newTransaction.Amount : -newTransaction.Amount;
+                decimal balanceAdjustment =
+                    newTransaction.Type == TransactionType.income
+                        ? newTransaction.Amount
+                        : -newTransaction.Amount;
 
                 await context
                     .Users.Where(u => u.UserId == userId)
-                    .ExecuteUpdateAsync(s => s.SetProperty(u => u.CurrentBalance, u => u.CurrentBalance + balanceAdjustment));
+                    .ExecuteUpdateAsync(s =>
+                        s.SetProperty(
+                            u => u.CurrentBalance,
+                            u => u.CurrentBalance + balanceAdjustment
+                        )
+                    );
 
                 // 5. Salva la transazione
                 context.Transactions.Add(newTransaction);
@@ -66,7 +79,11 @@ public class TransactionService(AppDbContext context) : ITransactionService
         });
     }
 
-    public async Task<Transaction> UpdateTransactionAsync(int transactionId, TransactionUpdateDto transactionDto, int userId)
+    public async Task<Transaction> UpdateTransactionAsync(
+        int transactionId,
+        TransactionUpdateDto transactionDto,
+        int userId
+    )
     {
         var strategy = context.Database.CreateExecutionStrategy();
 
@@ -78,20 +95,29 @@ public class TransactionService(AppDbContext context) : ITransactionService
             {
                 // 1. Trova la transazione (Senza caricare l'utente per evitare conflitti di tracking sul saldo)
                 var transaction =
-                    await context.Transactions.FirstOrDefaultAsync(t => t.TransactionId == transactionId && t.UserId == userId)
-                    ?? throw new AppException("transaction-not-found", HttpStatusCode.NotFound);
+                    await context.Transactions.FirstOrDefaultAsync(t =>
+                        t.TransactionId == transactionId && t.UserId == userId
+                    ) ?? throw new AppException("transaction-not-found", HttpStatusCode.NotFound);
 
                 if (
                     transactionDto.CategoryId is not null
-                    && !await context.Categories.AnyAsync(c => c.CategoryId == transactionDto.CategoryId && c.UserId == userId)
+                    && !await context.Categories.AnyAsync(c =>
+                        c.CategoryId == transactionDto.CategoryId && c.UserId == userId
+                    )
                 )
                     throw new AppException("category-not-found", HttpStatusCode.NotFound);
 
                 // 2. Calcola il DELTA per l'aggiornamento atomico
                 // Es: Vecchia = -10 (Uscita), Nuova = -15 (Uscita) -> Delta = -5
                 // Es: Vecchia = -10 (Uscita), Nuova = +20 (Entrata) -> Delta = +30
-                decimal oldAdjustment = transaction.Type == TransactionType.income ? transaction.Amount : -transaction.Amount;
-                decimal newAdjustment = transactionDto.Type == TransactionType.income ? transactionDto.Amount : -transactionDto.Amount;
+                decimal oldAdjustment =
+                    transaction.Type == TransactionType.income
+                        ? transaction.Amount
+                        : -transaction.Amount;
+                decimal newAdjustment =
+                    transactionDto.Type == TransactionType.income
+                        ? transactionDto.Amount
+                        : -transactionDto.Amount;
                 decimal delta = newAdjustment - oldAdjustment;
 
                 // 3. Aggiorna i campi della transazione
@@ -106,7 +132,9 @@ public class TransactionService(AppDbContext context) : ITransactionService
                 {
                     await context
                         .Users.Where(u => u.UserId == userId)
-                        .ExecuteUpdateAsync(s => s.SetProperty(u => u.CurrentBalance, u => u.CurrentBalance + delta));
+                        .ExecuteUpdateAsync(s =>
+                            s.SetProperty(u => u.CurrentBalance, u => u.CurrentBalance + delta)
+                        );
                 }
 
                 await context.SaveChangesAsync();
@@ -126,7 +154,10 @@ public class TransactionService(AppDbContext context) : ITransactionService
 
     public async Task<IEnumerable<Transaction>> GetTransactionsByUserIdAsync(int userId)
     {
-        return await context.Transactions.Where(t => t.UserId == userId).OrderByDescending(t => t.TransactionDate).ToListAsync();
+        return await context
+            .Transactions.Where(t => t.UserId == userId)
+            .OrderByDescending(t => t.TransactionDate)
+            .ToListAsync();
     }
 
     public async Task DeleteTransaction(int id, int userId)
@@ -140,15 +171,21 @@ public class TransactionService(AppDbContext context) : ITransactionService
             try
             {
                 var transaction =
-                    await context.Transactions.FirstOrDefaultAsync(t => t.TransactionId == id && t.UserId == userId)
-                    ?? throw new AppException("transaction-not-found", HttpStatusCode.NotFound);
+                    await context.Transactions.FirstOrDefaultAsync(t =>
+                        t.TransactionId == id && t.UserId == userId
+                    ) ?? throw new AppException("transaction-not-found", HttpStatusCode.NotFound);
 
                 // 1. Revert del saldo in modo atomico
-                decimal balanceRevert = transaction.Type == TransactionType.income ? -transaction.Amount : transaction.Amount;
+                decimal balanceRevert =
+                    transaction.Type == TransactionType.income
+                        ? -transaction.Amount
+                        : transaction.Amount;
 
                 await context
                     .Users.Where(u => u.UserId == userId)
-                    .ExecuteUpdateAsync(s => s.SetProperty(u => u.CurrentBalance, u => u.CurrentBalance + balanceRevert));
+                    .ExecuteUpdateAsync(s =>
+                        s.SetProperty(u => u.CurrentBalance, u => u.CurrentBalance + balanceRevert)
+                    );
 
                 // 2. Elimina la transazione
                 context.Transactions.Remove(transaction);

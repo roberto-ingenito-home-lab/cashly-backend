@@ -31,8 +31,9 @@ public class CategoryService(AppDbContext dbContext) : ICategoryService
     {
         // Trova la categoria esistente
         var category =
-            await dbContext.Categories.FirstOrDefaultAsync(c => c.CategoryId == categoryId && c.UserId == userId)
-            ?? throw new AppException("category-not-found", HttpStatusCode.NotFound);
+            await dbContext.Categories.FirstOrDefaultAsync(c =>
+                c.CategoryId == categoryId && c.UserId == userId
+            ) ?? throw new AppException("category-not-found", HttpStatusCode.NotFound);
 
         // Aggiorna i campi
         category.CategoryName = dto.CategoryName;
@@ -47,7 +48,9 @@ public class CategoryService(AppDbContext dbContext) : ICategoryService
 
     public async Task Delete(int categoryId, int userId)
     {
-        await dbContext.Categories.Where(c => c.CategoryId == categoryId && c.UserId == userId).ExecuteDeleteAsync();
+        await dbContext
+            .Categories.Where(c => c.CategoryId == categoryId && c.UserId == userId)
+            .ExecuteDeleteAsync();
     }
 
     public async Task<IEnumerable<Category>> GetAll(int userId)

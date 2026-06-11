@@ -65,7 +65,10 @@ builder.Services.AddSwaggerGen(c =>
 // Aggiungi il DbContext ai servizi dell'applicazione (Dependency Injection).
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"), o => o.MapEnum<TransactionType>("transaction_type"));
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        o => o.MapEnum<TransactionType>("transaction_type")
+    );
 });
 
 builder.Services.AddScoped<ICategoryService, CategoryService>();
@@ -73,7 +76,6 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
-
 
 // Aggiungi i controller
 builder
@@ -95,7 +97,10 @@ builder
             // Valida la chiave di firma (il segreto)
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not configured"))
+                Encoding.UTF8.GetBytes(
+                    builder.Configuration["Jwt:Key"]
+                        ?? throw new InvalidOperationException("JWT Key not configured")
+                )
             ),
 
             // Valida l'issuer (chi ha emesso il token)
@@ -135,7 +140,10 @@ app.UsePathBase("/cashly-api");
 app.UseForwardedHeaders(
     new ForwardedHeadersOptions
     {
-        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost,
+        ForwardedHeaders =
+            ForwardedHeaders.XForwardedFor
+            | ForwardedHeaders.XForwardedProto
+            | ForwardedHeaders.XForwardedHost,
         // Accetta headers da qualsiasi proxy (dato che siamo in Docker network)
         KnownProxies = { },
         KnownIPNetworks = { },
@@ -151,7 +159,14 @@ app.UseSwagger(c =>
     c.PreSerializeFilters.Add(
         (swaggerDoc, httpReq) =>
         {
-            swaggerDoc.Servers = [new() { Url = $"{httpReq.Scheme}://{httpReq.Host.Value}/cashly-api", Description = "API Server" }];
+            swaggerDoc.Servers =
+            [
+                new()
+                {
+                    Url = $"{httpReq.Scheme}://{httpReq.Host.Value}/cashly-api",
+                    Description = "API Server",
+                },
+            ];
         }
     );
 });

@@ -14,7 +14,7 @@ indent_style = space
 tab_width = 4
 
 # New line preferences
-end_of_line = crlf
+end_of_line = lf
 insert_final_newline = false
 
 #### .NET Code Actions ####
@@ -247,7 +247,7 @@ dotnet_naming_style.begins_with_i.word_separator =
 dotnet_naming_style.begins_with_i.capitalization = pascal_case
 
 [*.{cs,vb}]
-end_of_line = crlf
+end_of_line = lf
 tab_width = 4
 dotnet_style_operator_placement_when_wrapping = beginning_of_line
 dotnet_style_coalesce_expression = true:suggestion

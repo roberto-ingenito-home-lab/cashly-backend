@@ -15,25 +15,23 @@ namespace cashly.Migrations
                 name: "RefreshToken",
                 table: "Users",
                 type: "text",
-                nullable: true);
+                nullable: true
+            );
 
             migrationBuilder.AddColumn<DateTime>(
                 name: "RefreshTokenExpiry",
                 table: "Users",
                 type: "timestamp with time zone",
-                nullable: true);
+                nullable: true
+            );
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "RefreshToken",
-                table: "Users");
+            migrationBuilder.DropColumn(name: "RefreshToken", table: "Users");
 
-            migrationBuilder.DropColumn(
-                name: "RefreshTokenExpiry",
-                table: "Users");
+            migrationBuilder.DropColumn(name: "RefreshTokenExpiry", table: "Users");
         }
     }
 }

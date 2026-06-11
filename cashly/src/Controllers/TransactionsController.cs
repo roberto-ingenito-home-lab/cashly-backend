@@ -13,10 +13,15 @@ namespace cashly.src.Controllers;
 public class TransactionsController(ITransactionService transactionService) : ControllerBase
 {
     [HttpPost]
-    public async Task<ActionResult<TransactionResponseDto>> CreateTransaction([FromBody] TransactionCreateDto createTransactionDto)
+    public async Task<ActionResult<TransactionResponseDto>> CreateTransaction(
+        [FromBody] TransactionCreateDto createTransactionDto
+    )
     {
         var userId = User.GetUserId();
-        var newTransaction = await transactionService.CreateTransactionAsync(createTransactionDto, userId);
+        var newTransaction = await transactionService.CreateTransactionAsync(
+            createTransactionDto,
+            userId
+        );
 
         return Ok(newTransaction.ToDto());
     }
@@ -32,10 +37,17 @@ public class TransactionsController(ITransactionService transactionService) : Co
     }
 
     [HttpPut("{transactionId}")]
-    public async Task<ActionResult<TransactionResponseDto>> UpdateTransaction(int transactionId, [FromBody] TransactionUpdateDto updateTransactionDto)
+    public async Task<ActionResult<TransactionResponseDto>> UpdateTransaction(
+        int transactionId,
+        [FromBody] TransactionUpdateDto updateTransactionDto
+    )
     {
         var userId = User.GetUserId();
-        var updatedTransaction = await transactionService.UpdateTransactionAsync(transactionId, updateTransactionDto, userId);
+        var updatedTransaction = await transactionService.UpdateTransactionAsync(
+            transactionId,
+            updateTransactionDto,
+            userId
+        );
 
         return Ok(updatedTransaction.ToDto()); // 200
     }

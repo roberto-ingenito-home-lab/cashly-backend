@@ -53,7 +53,7 @@ public static class MappingExtensions
             EndDate = value.EndDate,
             LastPaymentDate = value.LastPaymentDate,
             CategoryId = value.CategoryId,
-            Category = value.Category != null ? value.Category.ToDto() : null
+            Category = value.Category != null ? value.Category.ToDto() : null,
         };
     }
 }

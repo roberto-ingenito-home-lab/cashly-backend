@@ -1,2 +1,5 @@
-# Auto detect text files and perform LF normalization
+# Imposta il comportamento predefinito per tutti i file
 * text=auto
+
+# Forza i file C# ad usare sempre LF
+*.cs text eol=lf

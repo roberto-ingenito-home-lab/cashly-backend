@@ -13,10 +13,15 @@ namespace cashly.src.Controllers;
 public class SubscriptionsController(ISubscriptionService subscriptionService) : ControllerBase
 {
     [HttpPost]
-    public async Task<ActionResult<SubscriptionResponseDto>> CreateSubscription([FromBody] SubscriptionCreateDto createSubscriptionDto)
+    public async Task<ActionResult<SubscriptionResponseDto>> CreateSubscription(
+        [FromBody] SubscriptionCreateDto createSubscriptionDto
+    )
     {
         var userId = User.GetUserId();
-        var newSubscription = await subscriptionService.CreateSubscriptionAsync(createSubscriptionDto, userId);
+        var newSubscription = await subscriptionService.CreateSubscriptionAsync(
+            createSubscriptionDto,
+            userId
+        );
 
         return Ok(newSubscription.ToDto());
     }
@@ -32,10 +37,17 @@ public class SubscriptionsController(ISubscriptionService subscriptionService) :
     }
 
     [HttpPut("{subscriptionId}")]
-    public async Task<ActionResult<SubscriptionResponseDto>> UpdateSubscription(int subscriptionId, [FromBody] SubscriptionUpdateDto updateSubscriptionDto)
+    public async Task<ActionResult<SubscriptionResponseDto>> UpdateSubscription(
+        int subscriptionId,
+        [FromBody] SubscriptionUpdateDto updateSubscriptionDto
+    )
     {
         var userId = User.GetUserId();
-        var updatedSubscription = await subscriptionService.UpdateSubscriptionAsync(subscriptionId, updateSubscriptionDto, userId);
+        var updatedSubscription = await subscriptionService.UpdateSubscriptionAsync(
+            subscriptionId,
+            updateSubscriptionDto,
+            userId
+        );
 
         return Ok(updatedSubscription.ToDto());
     }
@@ -50,10 +62,15 @@ public class SubscriptionsController(ISubscriptionService subscriptionService) :
     }
 
     [HttpPost("{subscriptionId}/post-transaction")]
-    public async Task<ActionResult<TransactionResponseDto>> PostTransactionFromSubscription(int subscriptionId)
+    public async Task<ActionResult<TransactionResponseDto>> PostTransactionFromSubscription(
+        int subscriptionId
+    )
     {
         var userId = User.GetUserId();
-        var transaction = await subscriptionService.PostTransactionFromSubscriptionAsync(subscriptionId, userId);
+        var transaction = await subscriptionService.PostTransactionFromSubscriptionAsync(
+            subscriptionId,
+            userId
+        );
 
         return Ok(transaction.ToDto());
     }

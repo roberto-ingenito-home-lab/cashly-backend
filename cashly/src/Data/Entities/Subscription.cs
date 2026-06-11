@@ -26,7 +26,6 @@ public class Subscription
 
     public DateTime? EndDate { get; set; }
 
-
     public DateTime? LastPaymentDate { get; set; }
 
     // Foreign Key for Category

@@ -13,7 +13,8 @@ public class EmailService(ILogger<EmailService> logger) : IEmailService
         string? portStr = Environment.GetEnvironmentVariable("SMTP_PORT");
         string? username = Environment.GetEnvironmentVariable("SMTP_USERNAME");
         string? password = Environment.GetEnvironmentVariable("SMTP_PASSWORD");
-        string fromEmail = Environment.GetEnvironmentVariable("SMTP_FROM_EMAIL") ?? "robe.ingenito@gmail.com";
+        string fromEmail =
+            Environment.GetEnvironmentVariable("SMTP_FROM_EMAIL") ?? "robe.ingenito@gmail.com";
         string fromName = Environment.GetEnvironmentVariable("SMTP_FROM_NAME") ?? "Cashly";
 
         int port = 587;
@@ -23,7 +24,8 @@ public class EmailService(ILogger<EmailService> logger) : IEmailService
         }
 
         string subject = "Ripristino Password - Cashly";
-        string body = $@"
+        string body =
+            $@"
             <h3>Richiesta di ripristino password</h3>
             <p>Abbiamo ricevuto una richiesta di ripristino della password per il tuo account Cashly.</p>
             <p>Per reimpostare la tua password, clicca sul link seguente:</p>
@@ -36,7 +38,11 @@ public class EmailService(ILogger<EmailService> logger) : IEmailService
             <p>Un saluto,<br>Il team di Cashly</p>";
 
         // Controlla se i parametri SMTP minimi sono configurati
-        if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+        if (
+            string.IsNullOrWhiteSpace(host)
+            || string.IsNullOrWhiteSpace(username)
+            || string.IsNullOrWhiteSpace(password)
+        )
         {
             logger.LogWarning("==== CONFIGURAZIONE SMTP ASSENTE O INCOMPLETA ====");
             logger.LogWarning("Fallback: Visualizzazione dell'email nei log per lo sviluppo.");
@@ -61,11 +67,16 @@ public class EmailService(ILogger<EmailService> logger) : IEmailService
             smtpClient.EnableSsl = true;
 
             await smtpClient.SendMailAsync(mailMessage);
-            logger.LogInformation($"Email di ripristino inviata con successo a {toEmail} via SMTP.");
+            logger.LogInformation(
+                $"Email di ripristino inviata con successo a {toEmail} via SMTP."
+            );
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, $"Errore durante l'invio dell'email di ripristino a {toEmail} via SMTP.");
+            logger.LogError(
+                ex,
+                $"Errore durante l'invio dell'email di ripristino a {toEmail} via SMTP."
+            );
             throw;
         }
     }

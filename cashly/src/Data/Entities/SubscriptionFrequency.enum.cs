@@ -7,5 +7,5 @@ public enum SubscriptionFrequency
     Bimonthly,
     Quarterly,
     SemiAnnually,
-    Annually
+    Annually,
 }

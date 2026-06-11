@@ -14,7 +14,11 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace cashly.src.Services.Implementations;
 
-public class UserService(AppDbContext dbContext, IConfiguration configuration, IEmailService emailService) : IUserService
+public class UserService(
+    AppDbContext dbContext,
+    IConfiguration configuration,
+    IEmailService emailService
+) : IUserService
 {
     public async Task Delete(int userId)
     {
@@ -49,7 +53,11 @@ public class UserService(AppDbContext dbContext, IConfiguration configuration, I
         }
 
         // Crea un nuovo utente e esegui l'hashing della password
-        User newUser = new() { Email = dto.Email, HashedPassword = BCrypt.Net.BCrypt.HashPassword(dto.Password) };
+        User newUser = new()
+        {
+            Email = dto.Email,
+            HashedPassword = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+        };
 
         // Salva l'utente nel database
         dbContext.Users.Add(newUser);
@@ -95,7 +103,9 @@ public class UserService(AppDbContext dbContext, IConfiguration configuration, I
         string? jwtKey = configuration["Jwt:Key"];
         if (string.IsNullOrEmpty(jwtKey))
         {
-            throw new InvalidOperationException("La chiave JWT non è configurata in appsettings.json");
+            throw new InvalidOperationException(
+                "La chiave JWT non è configurata in appsettings.json"
+            );
         }
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
@@ -135,14 +145,14 @@ public class UserService(AppDbContext dbContext, IConfiguration configuration, I
     public async Task ForgotPassword(ForgotPasswordRequestDto dto, string origin)
     {
         var user = await dbContext.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
-        
+
         if (user == null)
         {
             return;
         }
 
         var resetToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
-        
+
         user.PasswordResetToken = resetToken;
         user.PasswordResetTokenExpiry = DateTime.UtcNow.AddHours(1);
         await dbContext.SaveChangesAsync();
@@ -159,7 +169,9 @@ public class UserService(AppDbContext dbContext, IConfiguration configuration, I
 
     public async Task ResetPassword(ResetPasswordRequestDto dto)
     {
-        var user = await dbContext.Users.FirstOrDefaultAsync(u => u.PasswordResetToken == dto.Token);
+        var user = await dbContext.Users.FirstOrDefaultAsync(u =>
+            u.PasswordResetToken == dto.Token
+        );
 
         if (user == null || user.PasswordResetTokenExpiry < DateTime.UtcNow)
         {

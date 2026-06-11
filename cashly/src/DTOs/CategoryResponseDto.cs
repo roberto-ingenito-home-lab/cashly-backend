@@ -7,5 +7,4 @@ public class CategoryResponseDto
     public string? IconName { get; set; }
     public string? ColorHex { get; set; }
     public int UserId { get; set; }
-
 }

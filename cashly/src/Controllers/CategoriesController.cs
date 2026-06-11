@@ -30,7 +30,9 @@ public class CategoriesController(ICategoryService categoryService) : Controller
     }
 
     [HttpPost]
-    public async Task<ActionResult<CategoryResponseDto>> Create([FromBody] CategoryCreateDto category)
+    public async Task<ActionResult<CategoryResponseDto>> Create(
+        [FromBody] CategoryCreateDto category
+    )
     {
         var userId = User.GetUserId();
 
@@ -39,7 +41,10 @@ public class CategoriesController(ICategoryService categoryService) : Controller
     }
 
     [HttpPut("{categoryId}")]
-    public async Task<ActionResult<CategoryResponseDto>> Update(int categoryId, [FromBody] CategoryUpdateDto categoryDto)
+    public async Task<ActionResult<CategoryResponseDto>> Update(
+        int categoryId,
+        [FromBody] CategoryUpdateDto categoryDto
+    )
     {
         var userId = User.GetUserId();
 

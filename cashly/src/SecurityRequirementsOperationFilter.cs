@@ -10,7 +10,13 @@ public class SecurityRequirementsOperationFilter : IOperationFilter
     {
         // Controlla se l'endpoint ha l'attributo [AllowAnonymous]
         var hasAnonymous =
-            (context.MethodInfo.DeclaringType?.GetCustomAttributes(true).OfType<AllowAnonymousAttribute>().Any() ?? false)
+            (
+                context
+                    .MethodInfo.DeclaringType?.GetCustomAttributes(true)
+                    .OfType<AllowAnonymousAttribute>()
+                    .Any()
+                ?? false
+            )
             || context.MethodInfo.GetCustomAttributes(true).OfType<AllowAnonymousAttribute>().Any();
 
         if (hasAnonymous)
@@ -18,8 +24,13 @@ public class SecurityRequirementsOperationFilter : IOperationFilter
 
         // Controlla se l'endpoint ha l'attributo [Authorize] (o a livello di controller)
         var hasAuthorize =
-            (context.MethodInfo.DeclaringType?.GetCustomAttributes(true).OfType<AuthorizeAttribute>().Any() ?? false)
-            || context.MethodInfo.GetCustomAttributes(true).OfType<AuthorizeAttribute>().Any();
+            (
+                context
+                    .MethodInfo.DeclaringType?.GetCustomAttributes(true)
+                    .OfType<AuthorizeAttribute>()
+                    .Any()
+                ?? false
+            ) || context.MethodInfo.GetCustomAttributes(true).OfType<AuthorizeAttribute>().Any();
 
         if (!hasAuthorize)
             return; // Se non è esplicitamente autorizzato, non fare nulla
@@ -29,10 +40,7 @@ public class SecurityRequirementsOperationFilter : IOperationFilter
         [
             new OpenApiSecurityRequirement
             {
-                {
-                    new OpenApiSecuritySchemeReference("Bearer"),
-                    new List<string>()
-                },
+                { new OpenApiSecuritySchemeReference("Bearer"), new List<string>() },
             },
         ];
     }

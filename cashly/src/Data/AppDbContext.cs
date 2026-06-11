@@ -62,4 +62,3 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.HasPostgresEnum<TransactionType>();
     }
 }
-
