@@ -39,4 +39,21 @@ public static class MappingExtensions
             UserId = value.UserId,
         };
     }
+
+    public static SubscriptionResponseDto ToDto(this Subscription value)
+    {
+        return new SubscriptionResponseDto
+        {
+            SubscriptionId = value.SubscriptionId,
+            Name = value.Name,
+            Amount = value.Amount,
+            Type = value.Type,
+            Frequency = value.Frequency,
+            StartDate = value.StartDate,
+            EndDate = value.EndDate,
+            LastPaymentDate = value.LastPaymentDate,
+            CategoryId = value.CategoryId,
+            Category = value.Category != null ? value.Category.ToDto() : null
+        };
+    }
 }
