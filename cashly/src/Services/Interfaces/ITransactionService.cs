@@ -12,5 +12,6 @@ public interface ITransactionService
         int userId
     );
     Task<IEnumerable<Transaction>> GetTransactionsByUserIdAsync(int userId);
+    Task<TransactionListResponseDto> GetPaginatedTransactionsAsync(int userId, TransactionFilterDto filter);
     Task DeleteTransaction(int id, int userId);
 }

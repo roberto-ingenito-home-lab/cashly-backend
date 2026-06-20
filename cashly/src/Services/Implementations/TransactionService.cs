@@ -5,6 +5,7 @@ using cashly.src.DTOs;
 using cashly.src.Exceptions;
 using cashly.src.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using cashly.src.Extensions;
 
 namespace cashly.src.Services.Implementations;
 
@@ -158,6 +159,54 @@ public class TransactionService(AppDbContext context) : ITransactionService
             .Transactions.Where(t => t.UserId == userId)
             .OrderByDescending(t => t.TransactionDate)
             .ToListAsync();
+    }
+
+    public async Task<TransactionListResponseDto> GetPaginatedTransactionsAsync(int userId, TransactionFilterDto filter)
+    {
+        var query = context.Transactions.Where(t => t.UserId == userId);
+
+        if (filter.Type.HasValue)
+        {
+            query = query.Where(t => t.Type == filter.Type.Value);
+        }
+
+        if (filter.CategoryId.HasValue)
+        {
+            query = query.Where(t => t.CategoryId == filter.CategoryId.Value);
+        }
+
+        if (!string.IsNullOrEmpty(filter.DateFrom) && DateTime.TryParse(filter.DateFrom, out var dateFrom))
+        {
+            dateFrom = DateTime.SpecifyKind(dateFrom, DateTimeKind.Utc);
+            query = query.Where(t => t.TransactionDate >= dateFrom);
+        }
+
+        if (!string.IsNullOrEmpty(filter.DateTo) && DateTime.TryParse(filter.DateTo, out var dateTo))
+        {
+            dateTo = DateTime.SpecifyKind(dateTo, DateTimeKind.Utc).AddDays(1).AddTicks(-1);
+            query = query.Where(t => t.TransactionDate <= dateTo);
+        }
+
+        var totalCount = await query.CountAsync();
+        
+        var incomes = await query.Where(t => t.Type == TransactionType.income).SumAsync(t => t.Amount);
+        var expenses = await query.Where(t => t.Type == TransactionType.expense).SumAsync(t => t.Amount);
+
+        var transactions = await query
+            .OrderByDescending(t => t.TransactionDate)
+            .Skip(filter.Page * filter.PageSize)
+            .Take(filter.PageSize)
+            .Include(t => t.Category)
+            .ToListAsync();
+
+        return new TransactionListResponseDto
+        {
+            Transactions = transactions.Select(t => t.ToDto()),
+            TotalCount = totalCount,
+            TotalIncome = incomes,
+            TotalExpense = expenses,
+            Balance = incomes - expenses
+        };
     }
 
     public async Task DeleteTransaction(int id, int userId)

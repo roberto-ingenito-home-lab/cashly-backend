@@ -27,13 +27,11 @@ public class TransactionsController(ITransactionService transactionService) : Co
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<TransactionResponseDto>>> GetTransactions()
+    public async Task<ActionResult<TransactionListResponseDto>> GetTransactions([FromQuery] TransactionFilterDto filter)
     {
         var userId = User.GetUserId();
-        var transactions = await transactionService.GetTransactionsByUserIdAsync(userId);
-        var transactionResponse = transactions.Select(t => t.ToDto());
-
-        return Ok(transactionResponse);
+        var response = await transactionService.GetPaginatedTransactionsAsync(userId, filter);
+        return Ok(response);
     }
 
     [HttpPut("{transactionId}")]

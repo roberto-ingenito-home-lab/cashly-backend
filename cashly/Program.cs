@@ -14,7 +14,7 @@ using Microsoft.OpenApi;
 
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
-DotNetEnv.Env.Load();
+DotNetEnv.Env.TraversePath().Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -62,11 +62,22 @@ builder.Services.AddSwaggerGen(c =>
     c.OperationFilter<SecurityRequirementsOperationFilter>();
 });
 
-// Aggiungi il DbContext ai servizi dell'applicazione (Dependency Injection).
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+    // Se connectionString non esiste, significa che si è in ambiente di sviluppo
+    if (string.IsNullOrEmpty(connectionString))
+    {
+        var dbUser = Environment.GetEnvironmentVariable("CASHLY_POSTGRES_USER");
+        var dbPass = Environment.GetEnvironmentVariable("CASHLY_POSTGRES_PASSWORD");
+        var dbName = Environment.GetEnvironmentVariable("CASHLY_POSTGRES_DB");
+
+        connectionString = $"Host=localhost;Port=5116;Database={dbName};Username={dbUser};Password={dbPass}";
+    }
+
     options.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
+        connectionString,
         o => o.MapEnum<TransactionType>("transaction_type")
     );
 });
@@ -76,6 +87,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
 
 // Aggiungi i controller
 builder
