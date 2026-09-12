@@ -6,5 +6,6 @@ public class CategoryResponseDto
     public required string CategoryName { get; set; }
     public string? IconName { get; set; }
     public string? ColorHex { get; set; }
+    public bool IsHidden { get; set; }
     public int UserId { get; set; }
 }

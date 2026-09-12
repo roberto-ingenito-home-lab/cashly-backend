@@ -17,6 +17,7 @@ public class CategoryService(AppDbContext dbContext) : ICategoryService
             CategoryName = dto.CategoryName,
             IconName = dto.IconName,
             ColorHex = dto.ColorHex,
+            IsHidden = dto.IsHidden,
             UserId = userId,
         };
 
@@ -39,6 +40,10 @@ public class CategoryService(AppDbContext dbContext) : ICategoryService
         category.CategoryName = dto.CategoryName;
         category.IconName = dto.IconName;
         category.ColorHex = dto.ColorHex;
+        if (dto.IsHidden.HasValue)
+        {
+            category.IsHidden = dto.IsHidden.Value;
+        }
 
         // Salva le modifiche
         await dbContext.SaveChangesAsync();
@@ -48,6 +53,15 @@ public class CategoryService(AppDbContext dbContext) : ICategoryService
 
     public async Task Delete(int categoryId, int userId)
     {
+        // Setta a null CategoryId sulle transazioni e abbonamenti collegati prima di eliminare la categoria
+        await dbContext.Transactions
+            .Where(t => t.CategoryId == categoryId && t.UserId == userId)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.CategoryId, (int?)null));
+
+        await dbContext.Subscriptions
+            .Where(s => s.CategoryId == categoryId && s.UserId == userId)
+            .ExecuteUpdateAsync(s => s.SetProperty(s => s.CategoryId, (int?)null));
+
         await dbContext
             .Categories.Where(c => c.CategoryId == categoryId && c.UserId == userId)
             .ExecuteDeleteAsync();

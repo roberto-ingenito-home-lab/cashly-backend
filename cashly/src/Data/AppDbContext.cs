@@ -25,7 +25,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .Entity<Transaction>() //
             .HasOne(t => t.Category)
             .WithMany(c => c.Transactions)
-            .OnDelete(DeleteBehavior.NoAction);
+            .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder
             .Entity<Transaction>() //
@@ -45,7 +45,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasOne(s => s.Category)
             .WithMany()
             .HasForeignKey(s => s.CategoryId)
-            .OnDelete(DeleteBehavior.NoAction);
+            .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder
             .Entity<Subscription>()

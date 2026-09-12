@@ -13,6 +13,7 @@ public static class MappingExtensions
             CategoryName = value.CategoryName,
             IconName = value.IconName,
             ColorHex = value.ColorHex,
+            IsHidden = value.IsHidden,
             UserId = value.UserId,
         };
     }
