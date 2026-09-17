@@ -57,5 +57,5 @@ jobs:
 
       - name: Trigger Watchtower Deploy
         run: |
-          curl -f -H "Authorization: Bearer ${{ secrets.WATCHTOWER_TOKEN }}" \
+          curl -f -X POST -H "Authorization: Bearer ${{ secrets.WATCHTOWER_TOKEN }}" \
             https://watchtower.robertoingenito.com/v1/update
