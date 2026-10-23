@@ -194,6 +194,21 @@ public class InvestmentService(AppDbContext context) : IInvestmentService
         return MapToDto(acc);
     }
 
+    public async Task<InvestmentAccountDto> UpdateAccountAsync(int accountId, UpdateInvestmentAccountDto dto, int userId)
+    {
+        var acc = await context.InvestmentAccounts
+            .Include(a => a.Logs)
+            .FirstOrDefaultAsync(a => a.Id == accountId && a.UserId == userId)
+            ?? throw new AppException("Conto non trovato.", HttpStatusCode.NotFound);
+
+        acc.Name = dto.Name.Trim();
+        acc.UpdatedAt = DateTime.UtcNow;
+
+        await context.SaveChangesAsync();
+
+        return MapToDto(acc);
+    }
+
     public async Task<InvestmentAccountDto> RecordOperationAsync(InvestmentCashOperationDto dto, int userId)
     {
         var acc = await context.InvestmentAccounts

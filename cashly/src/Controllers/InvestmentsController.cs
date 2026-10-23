@@ -41,6 +41,17 @@ public class InvestmentsController(IInvestmentService investmentService) : Contr
         return Ok(account);
     }
 
+    [HttpPut("accounts/{id}")]
+    public async Task<ActionResult<InvestmentAccountDto>> UpdateAccount(
+        int id,
+        [FromBody] UpdateInvestmentAccountDto dto
+    )
+    {
+        var userId = User.GetUserId();
+        var account = await investmentService.UpdateAccountAsync(id, dto, userId);
+        return Ok(account);
+    }
+
     [HttpPost("operations")]
     public async Task<ActionResult<InvestmentAccountDto>> RecordOperation(
         [FromBody] InvestmentCashOperationDto dto
