@@ -9,6 +9,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Category> Categories { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
     public DbSet<Subscription> Subscriptions { get; set; }
+    public DbSet<InvestmentAccount> InvestmentAccounts { get; set; }
+    public DbSet<InvestmentLog> InvestmentLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -52,6 +54,27 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .Property(s => s.Frequency)
             .HasConversion<string>()
             .HasMaxLength(50);
+
+        modelBuilder
+            .Entity<InvestmentAccount>()
+            .HasOne(a => a.User)
+            .WithMany(u => u.InvestmentAccounts)
+            .HasForeignKey(a => a.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder
+            .Entity<InvestmentLog>()
+            .HasOne(l => l.Account)
+            .WithMany(a => a.Logs)
+            .HasForeignKey(l => l.AccountId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder
+            .Entity<InvestmentLog>()
+            .HasOne(l => l.User)
+            .WithMany()
+            .HasForeignKey(l => l.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         // imposta la email come unique
         modelBuilder

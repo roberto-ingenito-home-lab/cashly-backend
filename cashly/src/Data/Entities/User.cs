@@ -33,4 +33,5 @@ public class User
     public virtual ICollection<Transaction> Transactions { get; set; } = [];
     public virtual ICollection<Category> Categories { get; set; } = [];
     public virtual ICollection<Subscription> Subscriptions { get; set; } = [];
+    public virtual ICollection<InvestmentAccount> InvestmentAccounts { get; set; } = [];
 }

@@ -1,4 +1,5 @@
 using cashly.src.DTOs;
+using cashly.src.Extensions;
 using cashly.src.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -6,10 +7,10 @@ using Microsoft.AspNetCore.Mvc;
 namespace cashly.src.Controllers;
 
 [ApiController]
-[AllowAnonymous]
 [Route("[controller]")]
 public class UsersController(IUserService userService) : ControllerBase
 {
+    [AllowAnonymous]
     [HttpPost("signup")]
     public async Task<ActionResult<UserLoginResponseDto>> SignUp([FromBody] UserCreateDto dto)
     {
@@ -18,6 +19,7 @@ public class UsersController(IUserService userService) : ControllerBase
         return StatusCode(201, response);
     }
 
+    [AllowAnonymous]
     [HttpPost("signin")]
     public async Task<ActionResult<UserLoginResponseDto>> SignIn([FromBody] UserLoginDto dto)
     {
@@ -26,6 +28,7 @@ public class UsersController(IUserService userService) : ControllerBase
         return Ok(response);
     }
 
+    [AllowAnonymous]
     [HttpPost("refresh")]
     public async Task<ActionResult<UserLoginResponseDto>> Refresh(
         [FromBody] RefreshTokenRequestDto dto
@@ -42,6 +45,7 @@ public class UsersController(IUserService userService) : ControllerBase
         }
     }
 
+    [AllowAnonymous]
     [HttpPost("forgot-password")]
     public async Task<ActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto dto)
     {
@@ -64,10 +68,20 @@ public class UsersController(IUserService userService) : ControllerBase
         );
     }
 
+    [AllowAnonymous]
     [HttpPost("reset-password")]
     public async Task<ActionResult> ResetPassword([FromBody] ResetPasswordRequestDto dto)
     {
         await userService.ResetPassword(dto);
         return Ok(new { message = "Password reimpostata con successo." });
+    }
+
+    [Authorize]
+    [HttpPost("change-password")]
+    public async Task<ActionResult> ChangePassword([FromBody] ChangePasswordRequestDto dto)
+    {
+        var userId = User.GetUserId();
+        await userService.ChangePassword(userId, dto);
+        return Ok(new { message = "Password aggiornata con successo." });
     }
 }

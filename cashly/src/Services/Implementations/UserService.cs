@@ -184,4 +184,19 @@ public class UserService(
 
         await dbContext.SaveChangesAsync();
     }
+
+    public async Task ChangePassword(int userId, ChangePasswordRequestDto dto)
+    {
+        var user =
+            await dbContext.Users.FirstOrDefaultAsync(u => u.UserId == userId)
+            ?? throw new AppException("user-not-found", HttpStatusCode.NotFound);
+
+        if (!BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.HashedPassword))
+        {
+            throw new AppException("La password attuale non è corretta.", HttpStatusCode.BadRequest);
+        }
+
+        user.HashedPassword = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+        await dbContext.SaveChangesAsync();
+    }
 }

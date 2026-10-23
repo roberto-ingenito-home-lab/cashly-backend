@@ -80,6 +80,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         connectionString,
         o => o.MapEnum<TransactionType>("transaction_type")
     );
+    options.ConfigureWarnings(w =>
+        w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)
+    );
 });
 
 builder.Services.AddScoped<ICategoryService, CategoryService>();
@@ -88,6 +91,7 @@ builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<IInvestmentService, InvestmentService>();
 
 // Aggiungi i controller
 builder

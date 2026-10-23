@@ -58,6 +58,84 @@ namespace cashly.Migrations
                     b.ToTable("Categories");
                 });
 
+            modelBuilder.Entity("cashly.src.Data.Entities.InvestmentAccount", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("CashCurrentBalance")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<decimal>("CashTransferredNet")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<string>("ColorHex")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("IconName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("InvestmentAccounts");
+                });
+
+            modelBuilder.Entity("cashly.src.Data.Entities.InvestmentLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AccountId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ActionType")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<DateTime>("LogDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("InvestmentLogs");
+                });
+
             modelBuilder.Entity("cashly.src.Data.Entities.Subscription", b =>
                 {
                     b.Property<int>("SubscriptionId")
@@ -201,6 +279,36 @@ namespace cashly.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("cashly.src.Data.Entities.InvestmentAccount", b =>
+                {
+                    b.HasOne("cashly.src.Data.Entities.User", "User")
+                        .WithMany("InvestmentAccounts")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("cashly.src.Data.Entities.InvestmentLog", b =>
+                {
+                    b.HasOne("cashly.src.Data.Entities.InvestmentAccount", "Account")
+                        .WithMany("Logs")
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("cashly.src.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("cashly.src.Data.Entities.Subscription", b =>
                 {
                     b.HasOne("cashly.src.Data.Entities.Category", "Category")
@@ -242,9 +350,16 @@ namespace cashly.Migrations
                     b.Navigation("Transactions");
                 });
 
+            modelBuilder.Entity("cashly.src.Data.Entities.InvestmentAccount", b =>
+                {
+                    b.Navigation("Logs");
+                });
+
             modelBuilder.Entity("cashly.src.Data.Entities.User", b =>
                 {
                     b.Navigation("Categories");
+
+                    b.Navigation("InvestmentAccounts");
 
                     b.Navigation("Subscriptions");
 
