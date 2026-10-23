@@ -217,6 +217,35 @@ using (var scope = app.Services.CreateScope())
         // Applica le migrazioni in sospeso
         context.Database.Migrate();
 
+        // Assicura che l'enum postgres transaction_type contenga 'transfer_out' e 'transfer_in' e che InvestmentLogs abbia TransactionId
+        context.Database.ExecuteSqlRaw(@"
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'transfer_out' AND enumtypid = 'transaction_type'::regtype) THEN
+                    ALTER TYPE transaction_type ADD VALUE 'transfer_out';
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'transfer_in' AND enumtypid = 'transaction_type'::regtype) THEN
+                    ALTER TYPE transaction_type ADD VALUE 'transfer_in';
+                END IF;
+            END $$;
+
+            ALTER TABLE ""InvestmentLogs"" ADD COLUMN IF NOT EXISTS ""TransactionId"" integer REFERENCES ""Transactions""(""TransactionId"") ON DELETE RESTRICT;
+            
+            -- Assicura che la foreign key esistente sia ON DELETE RESTRICT
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.table_constraints 
+                    WHERE constraint_name = 'InvestmentLogs_TransactionId_fkey' 
+                    AND table_name = 'InvestmentLogs'
+                ) THEN
+                    ALTER TABLE ""InvestmentLogs"" DROP CONSTRAINT ""InvestmentLogs_TransactionId_fkey"";
+                    ALTER TABLE ""InvestmentLogs"" ADD CONSTRAINT ""InvestmentLogs_TransactionId_fkey"" 
+                        FOREIGN KEY (""TransactionId"") REFERENCES ""Transactions""(""TransactionId"") ON DELETE RESTRICT;
+                END IF;
+            END $$;
+        ");
+
         Console.WriteLine("Migrazioni applicate con successo.");
     }
     catch (Exception ex)

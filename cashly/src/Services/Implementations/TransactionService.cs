@@ -28,6 +28,10 @@ public class TransactionService(AppDbContext context) : ITransactionService
                 if (!await context.Users.AnyAsync(u => u.UserId == userId))
                     throw new AppException("user-not-found", HttpStatusCode.NotFound);
 
+                // I trasferimenti possono essere originati solo dalla sezione Investimenti
+                if (transactionDto.Type == TransactionType.transfer_out || transactionDto.Type == TransactionType.transfer_in)
+                    throw new AppException("transfers-cannot-be-created-directly", HttpStatusCode.BadRequest);
+
                 // 2. Verifica categoria
                 if (
                     transactionDto.CategoryId is not null
@@ -49,10 +53,14 @@ public class TransactionService(AppDbContext context) : ITransactionService
                 };
 
                 // 4. Aggiorna il saldo in modo ATOMICO sul Database
-                decimal balanceAdjustment =
-                    newTransaction.Type == TransactionType.income
-                        ? newTransaction.Amount
-                        : -newTransaction.Amount;
+                decimal balanceAdjustment = newTransaction.Type switch
+                {
+                    TransactionType.income => newTransaction.Amount,
+                    TransactionType.transfer_in => newTransaction.Amount,
+                    TransactionType.expense => -newTransaction.Amount,
+                    TransactionType.transfer_out => -newTransaction.Amount,
+                    _ => 0
+                };
 
                 await context
                     .Users.Where(u => u.UserId == userId)
@@ -100,6 +108,12 @@ public class TransactionService(AppDbContext context) : ITransactionService
                         t.TransactionId == transactionId && t.UserId == userId
                     ) ?? throw new AppException("transaction-not-found", HttpStatusCode.NotFound);
 
+                // Non consentire la modifica di transazioni collegate a investimenti
+                if (transaction.Type == TransactionType.transfer_out || transaction.Type == TransactionType.transfer_in || await context.InvestmentLogs.AnyAsync(l => l.TransactionId == transactionId))
+                {
+                    throw new AppException("transfer-transaction-cannot-be-modified", HttpStatusCode.BadRequest);
+                }
+
                 if (
                     transactionDto.CategoryId is not null
                     && !await context.Categories.AnyAsync(c =>
@@ -111,14 +125,22 @@ public class TransactionService(AppDbContext context) : ITransactionService
                 // 2. Calcola il DELTA per l'aggiornamento atomico
                 // Es: Vecchia = -10 (Uscita), Nuova = -15 (Uscita) -> Delta = -5
                 // Es: Vecchia = -10 (Uscita), Nuova = +20 (Entrata) -> Delta = +30
-                decimal oldAdjustment =
-                    transaction.Type == TransactionType.income
-                        ? transaction.Amount
-                        : -transaction.Amount;
-                decimal newAdjustment =
-                    transactionDto.Type == TransactionType.income
-                        ? transactionDto.Amount
-                        : -transactionDto.Amount;
+                decimal oldAdjustment = transaction.Type switch
+                {
+                    TransactionType.income => transaction.Amount,
+                    TransactionType.transfer_in => transaction.Amount,
+                    TransactionType.expense => -transaction.Amount,
+                    TransactionType.transfer_out => -transaction.Amount,
+                    _ => 0
+                };
+                decimal newAdjustment = transactionDto.Type switch
+                {
+                    TransactionType.income => transactionDto.Amount,
+                    TransactionType.transfer_in => transactionDto.Amount,
+                    TransactionType.expense => -transactionDto.Amount,
+                    TransactionType.transfer_out => -transactionDto.Amount,
+                    _ => 0
+                };
                 decimal delta = newAdjustment - oldAdjustment;
 
                 // 3. Aggiorna i campi della transazione
@@ -191,6 +213,9 @@ public class TransactionService(AppDbContext context) : ITransactionService
         
         var incomes = await query.Where(t => t.Type == TransactionType.income).SumAsync(t => t.Amount);
         var expenses = await query.Where(t => t.Type == TransactionType.expense).SumAsync(t => t.Amount);
+        var transfersIn = await query.Where(t => t.Type == TransactionType.transfer_in).SumAsync(t => t.Amount);
+        var transfersOut = await query.Where(t => t.Type == TransactionType.transfer_out).SumAsync(t => t.Amount);
+        var netTransfers = transfersIn - transfersOut;
 
         var transactions = await query
             .OrderByDescending(t => t.TransactionDate)
@@ -205,7 +230,8 @@ public class TransactionService(AppDbContext context) : ITransactionService
             TotalCount = totalCount,
             TotalIncome = incomes,
             TotalExpense = expenses,
-            Balance = incomes - expenses
+            TotalTransfers = netTransfers,
+            Balance = incomes - expenses + netTransfers
         };
     }
 
@@ -224,11 +250,21 @@ public class TransactionService(AppDbContext context) : ITransactionService
                         t.TransactionId == id && t.UserId == userId
                     ) ?? throw new AppException("transaction-not-found", HttpStatusCode.NotFound);
 
+                // Impedisci cancellazione di transazioni di trasferimento o collegate a investimenti
+                if (transaction.Type == TransactionType.transfer_out || transaction.Type == TransactionType.transfer_in || await context.InvestmentLogs.AnyAsync(l => l.TransactionId == id))
+                {
+                    throw new AppException("transfer-transaction-cannot-be-deleted", HttpStatusCode.BadRequest);
+                }
+
                 // 1. Revert del saldo in modo atomico
-                decimal balanceRevert =
-                    transaction.Type == TransactionType.income
-                        ? -transaction.Amount
-                        : transaction.Amount;
+                decimal balanceRevert = transaction.Type switch
+                {
+                    TransactionType.income => -transaction.Amount,
+                    TransactionType.transfer_in => -transaction.Amount,
+                    TransactionType.expense => transaction.Amount,
+                    TransactionType.transfer_out => transaction.Amount,
+                    _ => 0
+                };
 
                 await context
                     .Users.Where(u => u.UserId == userId)

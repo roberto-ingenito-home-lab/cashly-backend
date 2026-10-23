@@ -76,6 +76,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasForeignKey(l => l.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        modelBuilder
+            .Entity<InvestmentLog>()
+            .HasOne(l => l.Transaction)
+            .WithMany()
+            .HasForeignKey(l => l.TransactionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         // imposta la email come unique
         modelBuilder
             .Entity<User>() //

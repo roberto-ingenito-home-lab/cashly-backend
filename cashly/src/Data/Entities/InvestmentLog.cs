@@ -24,4 +24,7 @@ public class InvestmentLog
 
     [MaxLength(300)]
     public string? Note { get; set; }
+
+    public int? TransactionId { get; set; }
+    public virtual Transaction? Transaction { get; set; }
 }

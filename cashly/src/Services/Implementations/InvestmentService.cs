@@ -155,6 +155,21 @@ public class InvestmentService(AppDbContext context) : IInvestmentService
         var initialLogs = new List<InvestmentLog>();
         if (dto.InitialDeposit > 0)
         {
+            var tx = new Transaction
+            {
+                UserId = userId,
+                Amount = dto.InitialDeposit,
+                Type = TransactionType.transfer_out,
+                TransactionDate = now,
+                Description = $"Trasferimento iniziale verso {acc.Name}",
+                CategoryId = null
+            };
+            context.Transactions.Add(tx);
+            await context.SaveChangesAsync();
+
+            await context.Users.Where(u => u.UserId == userId)
+                .ExecuteUpdateAsync(s => s.SetProperty(u => u.CurrentBalance, u => u.CurrentBalance - dto.InitialDeposit));
+
             var depLog = new InvestmentLog
             {
                 AccountId = acc.Id,
@@ -163,6 +178,7 @@ public class InvestmentService(AppDbContext context) : IInvestmentService
                 Amount = dto.InitialDeposit,
                 LogDate = now,
                 Note = "Versamento iniziale",
+                TransactionId = tx.TransactionId,
             };
             context.InvestmentLogs.Add(depLog);
             initialLogs.Add(depLog);
@@ -217,6 +233,9 @@ public class InvestmentService(AppDbContext context) : IInvestmentService
             ?? throw new AppException("Conto non trovato.", HttpStatusCode.NotFound);
 
         var now = DateTime.UtcNow;
+        var opDate = dto.LogDate.HasValue
+            ? DateTime.SpecifyKind(dto.LogDate.Value, DateTimeKind.Utc)
+            : now;
 
         var defaultNote = dto.OperationType switch
         {
@@ -227,16 +246,61 @@ public class InvestmentService(AppDbContext context) : IInvestmentService
             _ => "Operazione",
         };
 
+        var note = string.IsNullOrWhiteSpace(dto.Note) ? defaultNote : dto.Note.Trim();
+
+        int? linkedTransactionId = null;
+
+        // Se l'operazione è DEPOSIT (uscita dal conto corrente verso investimenti)
+        // oppure WITHDRAWAL (rientro sul conto corrente da investimenti),
+        // creiamo automaticamente la transazione collegata e aggiorniamo il saldo CurrentBalance dell'utente.
+        if (dto.OperationType == InvestmentLogType.DEPOSIT)
+        {
+            var tx = new Transaction
+            {
+                UserId = userId,
+                Amount = dto.Amount,
+                Type = TransactionType.transfer_out,
+                TransactionDate = opDate,
+                Description = $"Trasferimento verso {acc.Name}" + (string.IsNullOrWhiteSpace(dto.Note) ? "" : $": {dto.Note.Trim()}"),
+                CategoryId = null
+            };
+            context.Transactions.Add(tx);
+            await context.SaveChangesAsync();
+            linkedTransactionId = tx.TransactionId;
+
+            // Riduce il saldo di cassa/conto corrente dell'utente
+            await context.Users.Where(u => u.UserId == userId)
+                .ExecuteUpdateAsync(s => s.SetProperty(u => u.CurrentBalance, u => u.CurrentBalance - dto.Amount));
+        }
+        else if (dto.OperationType == InvestmentLogType.WITHDRAWAL)
+        {
+            var tx = new Transaction
+            {
+                UserId = userId,
+                Amount = dto.Amount,
+                Type = TransactionType.transfer_in,
+                TransactionDate = opDate,
+                Description = $"Rientro da {acc.Name}" + (string.IsNullOrWhiteSpace(dto.Note) ? "" : $": {dto.Note.Trim()}"),
+                CategoryId = null
+            };
+            context.Transactions.Add(tx);
+            await context.SaveChangesAsync();
+            linkedTransactionId = tx.TransactionId;
+
+            // Incrementa il saldo di cassa/conto corrente dell'utente
+            await context.Users.Where(u => u.UserId == userId)
+                .ExecuteUpdateAsync(s => s.SetProperty(u => u.CurrentBalance, u => u.CurrentBalance + dto.Amount));
+        }
+
         var log = new InvestmentLog
         {
             AccountId = acc.Id,
             UserId = userId,
             ActionType = dto.OperationType,
             Amount = dto.Amount,
-            LogDate = dto.LogDate.HasValue
-                ? DateTime.SpecifyKind(dto.LogDate.Value, DateTimeKind.Utc)
-                : now,
-            Note = string.IsNullOrWhiteSpace(dto.Note) ? defaultNote : dto.Note.Trim(),
+            LogDate = opDate,
+            Note = note,
+            TransactionId = linkedTransactionId,
         };
 
         context.InvestmentLogs.Add(log);
@@ -288,15 +352,90 @@ public class InvestmentService(AppDbContext context) : IInvestmentService
     )
     {
         var log = await context.InvestmentLogs
+            .Include(l => l.Account)
             .FirstOrDefaultAsync(l => l.Id == logId && l.UserId == userId)
             ?? throw new AppException("Movimento non trovato.", HttpStatusCode.NotFound);
 
+        var newOpDate = dto.LogDate.HasValue
+            ? DateTime.SpecifyKind(dto.LogDate.Value, DateTimeKind.Utc)
+            : log.LogDate;
+
+        // Se era collegata una transazione o se il nuovo tipo richiede una transazione
+        if (log.TransactionId.HasValue)
+        {
+            var linkedTx = await context.Transactions
+                .FirstOrDefaultAsync(t => t.TransactionId == log.TransactionId.Value && t.UserId == userId);
+
+            if (linkedTx != null)
+            {
+                // Revert del vecchio impatto della transazione sul CurrentBalance
+                decimal revertDelta = linkedTx.Type switch
+                {
+                    TransactionType.income => -linkedTx.Amount,
+                    TransactionType.transfer_in => -linkedTx.Amount,
+                    TransactionType.expense => linkedTx.Amount,
+                    TransactionType.transfer_out => linkedTx.Amount,
+                    _ => 0
+                };
+                await context.Users.Where(u => u.UserId == userId)
+                    .ExecuteUpdateAsync(s => s.SetProperty(u => u.CurrentBalance, u => u.CurrentBalance + revertDelta));
+
+                // Se la nuova operazione è ancora DEPOSIT o WITHDRAWAL, aggiorniamo la transazione
+                if (dto.ActionType == InvestmentLogType.DEPOSIT)
+                {
+                    linkedTx.Amount = dto.Amount;
+                    linkedTx.Type = TransactionType.transfer_out;
+                    linkedTx.TransactionDate = newOpDate;
+                    linkedTx.Description = $"Trasferimento verso {log.Account.Name}" + (string.IsNullOrWhiteSpace(dto.Note) ? "" : $": {dto.Note.Trim()}");
+
+                    // Applica nuovo delta (-Amount)
+                    await context.Users.Where(u => u.UserId == userId)
+                        .ExecuteUpdateAsync(s => s.SetProperty(u => u.CurrentBalance, u => u.CurrentBalance - dto.Amount));
+                }
+                else if (dto.ActionType == InvestmentLogType.WITHDRAWAL)
+                {
+                    linkedTx.Amount = dto.Amount;
+                    linkedTx.Type = TransactionType.transfer_in;
+                    linkedTx.TransactionDate = newOpDate;
+                    linkedTx.Description = $"Rientro da {log.Account.Name}" + (string.IsNullOrWhiteSpace(dto.Note) ? "" : $": {dto.Note.Trim()}");
+
+                    // Applica nuovo delta (+Amount)
+                    await context.Users.Where(u => u.UserId == userId)
+                        .ExecuteUpdateAsync(s => s.SetProperty(u => u.CurrentBalance, u => u.CurrentBalance + dto.Amount));
+                }
+                else
+                {
+                    // Se è diventato INTEREST o VALUE_SNAPSHOT, la transazione non serve più
+                    context.Transactions.Remove(linkedTx);
+                    log.TransactionId = null;
+                }
+            }
+        }
+        else if (dto.ActionType == InvestmentLogType.DEPOSIT || dto.ActionType == InvestmentLogType.WITHDRAWAL)
+        {
+            // Non c'era transazione ma ora è diventato DEPOSIT o WITHDRAWAL -> creiamola
+            var isDep = dto.ActionType == InvestmentLogType.DEPOSIT;
+            var tx = new Transaction
+            {
+                UserId = userId,
+                Amount = dto.Amount,
+                Type = isDep ? TransactionType.transfer_out : TransactionType.transfer_in,
+                TransactionDate = newOpDate,
+                Description = (isDep ? $"Trasferimento verso {log.Account.Name}" : $"Rientro da {log.Account.Name}") + (string.IsNullOrWhiteSpace(dto.Note) ? "" : $": {dto.Note.Trim()}"),
+                CategoryId = null
+            };
+            context.Transactions.Add(tx);
+            await context.SaveChangesAsync();
+            log.TransactionId = tx.TransactionId;
+
+            decimal balChange = isDep ? -dto.Amount : dto.Amount;
+            await context.Users.Where(u => u.UserId == userId)
+                .ExecuteUpdateAsync(s => s.SetProperty(u => u.CurrentBalance, u => u.CurrentBalance + balChange));
+        }
+
         log.ActionType = dto.ActionType;
         log.Amount = dto.Amount;
-        if (dto.LogDate.HasValue)
-        {
-            log.LogDate = DateTime.SpecifyKind(dto.LogDate.Value, DateTimeKind.Utc);
-        }
+        log.LogDate = newOpDate;
         log.Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim();
 
         await context.SaveChangesAsync();
@@ -318,6 +457,37 @@ public class InvestmentService(AppDbContext context) : IInvestmentService
             ?? throw new AppException("Movimento non trovato.", HttpStatusCode.NotFound);
 
         var accountId = log.AccountId;
+
+        // Se era collegata una transazione automatica, eliminiamola e ripristiniamo il saldo di cassa
+        if (log.TransactionId.HasValue)
+        {
+            var linkedTxId = log.TransactionId.Value;
+            // Sgancia prima la foreign key dal log per non violare ON DELETE RESTRICT
+            log.TransactionId = null;
+            await context.SaveChangesAsync();
+
+            var linkedTx = await context.Transactions
+                .FirstOrDefaultAsync(t => t.TransactionId == linkedTxId && t.UserId == userId);
+
+            if (linkedTx != null)
+            {
+                decimal revertDelta = linkedTx.Type switch
+                {
+                    TransactionType.income => -linkedTx.Amount,
+                    TransactionType.transfer_in => -linkedTx.Amount,
+                    TransactionType.expense => linkedTx.Amount,
+                    TransactionType.transfer_out => linkedTx.Amount,
+                    _ => 0
+                };
+
+                await context.Users.Where(u => u.UserId == userId)
+                    .ExecuteUpdateAsync(s => s.SetProperty(u => u.CurrentBalance, u => u.CurrentBalance + revertDelta));
+
+                context.Transactions.Remove(linkedTx);
+                await context.SaveChangesAsync();
+            }
+        }
+
         context.InvestmentLogs.Remove(log);
         await context.SaveChangesAsync();
 
@@ -335,8 +505,46 @@ public class InvestmentService(AppDbContext context) : IInvestmentService
     public async Task DeleteAccountAsync(int accountId, int userId)
     {
         var acc = await context.InvestmentAccounts
+            .Include(a => a.Logs)
             .FirstOrDefaultAsync(a => a.Id == accountId && a.UserId == userId)
             ?? throw new AppException("Conto non trovato.", HttpStatusCode.NotFound);
+
+        // Se ci sono log con transazioni collegate, eliminiamo le transazioni e ripristiniamo il saldo utente
+        var linkedTxIds = acc.Logs.Where(l => l.TransactionId.HasValue).Select(l => l.TransactionId!.Value).ToList();
+        if (linkedTxIds.Count > 0)
+        {
+            var linkedTxs = await context.Transactions
+                .Where(t => linkedTxIds.Contains(t.TransactionId) && t.UserId == userId)
+                .ToListAsync();
+
+            decimal totalRevert = 0;
+            foreach (var tx in linkedTxs)
+            {
+                totalRevert += tx.Type switch
+                {
+                    TransactionType.income => -tx.Amount,
+                    TransactionType.transfer_in => -tx.Amount,
+                    TransactionType.expense => tx.Amount,
+                    TransactionType.transfer_out => tx.Amount,
+                    _ => 0
+                };
+            }
+
+            if (totalRevert != 0)
+            {
+                await context.Users.Where(u => u.UserId == userId)
+                    .ExecuteUpdateAsync(s => s.SetProperty(u => u.CurrentBalance, u => u.CurrentBalance + totalRevert));
+            }
+
+            // Sgancia i TransactionId dai log prima di rimuovere le transazioni per rispettare ON DELETE RESTRICT
+            foreach (var log in acc.Logs.Where(l => l.TransactionId.HasValue))
+            {
+                log.TransactionId = null;
+            }
+            await context.SaveChangesAsync();
+
+            context.Transactions.RemoveRange(linkedTxs);
+        }
 
         context.InvestmentAccounts.Remove(acc);
         await context.SaveChangesAsync();
