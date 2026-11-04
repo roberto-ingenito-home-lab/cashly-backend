@@ -237,16 +237,7 @@ public class InvestmentService(AppDbContext context) : IInvestmentService
             ? DateTime.SpecifyKind(dto.LogDate.Value, DateTimeKind.Utc)
             : now;
 
-        var defaultNote = dto.OperationType switch
-        {
-            InvestmentLogType.DEPOSIT => "Versamento sul conto",
-            InvestmentLogType.WITHDRAWAL => "Prelievo dal conto",
-            InvestmentLogType.INTEREST => "Accredito interessi",
-            InvestmentLogType.VALUE_SNAPSHOT => "Aggiornamento valore attuale",
-            _ => "Operazione",
-        };
-
-        var note = string.IsNullOrWhiteSpace(dto.Note) ? defaultNote : dto.Note.Trim();
+        var note = dto.Note?.Trim() ?? "";
 
         int? linkedTransactionId = null;
 
