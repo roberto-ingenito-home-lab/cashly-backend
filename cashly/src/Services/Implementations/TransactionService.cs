@@ -187,7 +187,11 @@ public class TransactionService(AppDbContext context) : ITransactionService
     {
         var query = context.Transactions.Where(t => t.UserId == userId);
 
-        if (filter.Type.HasValue)
+        if (filter.Types != null && filter.Types.Count > 0)
+        {
+            query = query.Where(t => filter.Types.Contains(t.Type));
+        }
+        else if (filter.Type.HasValue)
         {
             query = query.Where(t => t.Type == filter.Type.Value);
         }

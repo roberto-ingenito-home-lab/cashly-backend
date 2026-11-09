@@ -18,6 +18,7 @@ public class TransactionListResponseDto
 public class TransactionFilterDto
 {
     public TransactionType? Type { get; set; }
+    public List<TransactionType>? Types { get; set; }
     public int? CategoryId { get; set; }
     public string? DateFrom { get; set; }
     public string? DateTo { get; set; }
