@@ -10,6 +10,9 @@ public class TransactionListResponseDto
     public decimal TotalExpense { get; set; }
     public decimal TotalTransfers { get; set; }
     public decimal Balance { get; set; }
+    public decimal LiquidBalance { get; set; }
+    public decimal InvestmentBalance { get; set; }
+    public decimal NetWorth { get; set; }
 }
 
 public class TransactionFilterDto

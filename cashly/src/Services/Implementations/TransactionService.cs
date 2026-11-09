@@ -224,6 +224,15 @@ public class TransactionService(AppDbContext context) : ITransactionService
             .Include(t => t.Category)
             .ToListAsync();
 
+        var liquidBalance = await context.Users
+            .Where(u => u.UserId == userId)
+            .Select(u => u.CurrentBalance)
+            .FirstOrDefaultAsync();
+
+        var investmentBalance = await context.InvestmentAccounts
+            .Where(a => a.UserId == userId)
+            .SumAsync(a => a.CashCurrentBalance);
+
         return new TransactionListResponseDto
         {
             Transactions = transactions.Select(t => t.ToDto()),
@@ -231,7 +240,10 @@ public class TransactionService(AppDbContext context) : ITransactionService
             TotalIncome = incomes,
             TotalExpense = expenses,
             TotalTransfers = netTransfers,
-            Balance = incomes - expenses + netTransfers
+            Balance = incomes - expenses + netTransfers,
+            LiquidBalance = liquidBalance,
+            InvestmentBalance = investmentBalance,
+            NetWorth = liquidBalance + investmentBalance
         };
     }
 
